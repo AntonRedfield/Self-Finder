@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #211D52;
+  --color-secondary: #12796A;
+  --color-accent: #F6A02D;
+  --color-wave: #5B79C7;
+  --color-sky: #CBE6F7;
+
+  --color-bg-light: #F5F7FA;
+  --color-text-dark: #4A4A4A;
+  --color-text-black: #1A1A1A;
+
+  --font-sans: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Keyframes must be outside @theme */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Utility classes for animations */
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s ease-out forwards;
+}
+
+/* Base styles */
+body {
+  background-color: #F5F7FA;
+  color: #4A4A4A;
+  font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #1A1A1A;
+  font-weight: 700;
+}
+
+h1 {
+  font-size: 2rem;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+h2 {
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+h3 {
+  font-size: 1.25rem;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+/* Component classes */
+.btn-primary {
+  background-color: #211D52;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: #12796A;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: #211D52;
+  border: 2px solid #211D52;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: #CBE6F7;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.card {
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 1.5rem;
+}
+
+.input-field {
+  border: 1px solid #E0E0E0;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  width: 100%;
+  transition: border-color 0.2s;
+  outline: none;
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.input-field:focus {
+  border-color: #211D52;
+}
+

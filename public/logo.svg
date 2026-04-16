@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 540" fill="none">
+  <!-- Magnifying Glass Handle -->
+  <rect x="340" y="380" width="45" height="160" rx="22" transform="rotate(-45, 362, 460)" fill="#211D52"/>
+  <!-- Handle slot -->
+  <rect x="355" y="420" width="15" height="70" rx="7" transform="rotate(-45, 362, 460)" fill="white" opacity="0.3"/>
+
+  <!-- Outer Ring of Magnifying Glass -->
+  <circle cx="230" cy="230" r="200" fill="#211D52"/>
+  <!-- White gap ring -->
+  <circle cx="230" cy="230" r="178" fill="white"/>
+  <!-- Inner navy ring -->
+  <circle cx="230" cy="230" r="168" fill="#211D52"/>
+  <!-- White gap ring 2 -->
+  <circle cx="230" cy="230" r="150" fill="white"/>
+
+  <!-- Teal compass sections (quadrants) -->
+  <!-- Top-right teal -->
+  <path d="M230,80 A150,150 0 0,1 380,230 L230,230 Z" fill="#12796A"/>
+  <!-- Bottom-left teal -->
+  <path d="M230,380 A150,150 0 0,1 80,230 L230,230 Z" fill="#12796A"/>
+  <!-- Top-left white -->
+  <path d="M80,230 A150,150 0 0,1 230,80 L230,230 Z" fill="white"/>
+  <!-- Bottom-right white -->
+  <path d="M380,230 A150,150 0 0,1 230,380 L230,230 Z" fill="white"/>
+
+  <!-- Inner white compass face -->
+  <circle cx="230" cy="230" r="110" fill="white"/>
+
+  <!-- Tick marks around compass -->
+  <!-- N -->
+  <rect x="227" y="125" width="6" height="20" fill="#211D52"/>
+  <!-- S -->
+  <rect x="227" y="315" width="6" height="20" fill="#211D52"/>
+  <!-- E -->
+  <rect x="315" y="227" width="20" height="6" fill="#211D52"/>
+  <!-- W -->
+  <rect x="125" y="227" width="20" height="6" fill="#211D52"/>
+  <!-- NE -->
+  <rect x="300" y="152" width="6" height="14" transform="rotate(45, 303, 159)" fill="#211D52"/>
+  <!-- SE -->
+  <rect x="300" y="294" width="6" height="14" transform="rotate(-45, 303, 301)" fill="#211D52"/>
+  <!-- SW -->
+  <rect x="154" y="294" width="6" height="14" transform="rotate(45, 157, 301)" fill="#211D52"/>
+  <!-- NW -->
+  <rect x="154" y="152" width="6" height="14" transform="rotate(-45, 157, 159)" fill="#211D52"/>
+
+  <!-- Small ticks -->
+  <rect x="228.5" y="132" width="3" height="10" transform="rotate(22.5, 230, 230)" fill="#211D52" opacity="0.6"/>
+  <rect x="228.5" y="132" width="3" height="10" transform="rotate(67.5, 230, 230)" fill="#211D52" opacity="0.6"/>
+  <rect x="228.5" y="132" width="3" height="10" transform="rotate(112.5, 230, 230)" fill="#211D52" opacity="0.6"/>
+  <rect x="228.5" y="132" width="3" height="10" transform="rotate(157.5, 230, 230)" fill="#211D52" opacity="0.6"/>
+  <rect x="228.5" y="132" width="3" height="10" transform="rotate(202.5, 230, 230)" fill="#211D52" opacity="0.6"/>
+  <rect x="228.5" y="132" width="3" height="10" transform="rotate(247.5, 230, 230)" fill="#211D52" opacity="0.6"/>
+  <rect x="228.5" y="132" width="3" height="10" transform="rotate(292.5, 230, 230)" fill="#211D52" opacity="0.6"/>
+  <rect x="228.5" y="132" width="3" height="10" transform="rotate(337.5, 230, 230)" fill="#211D52" opacity="0.6"/>
+
+  <!-- Compass Needle - Orange/Gold pointing upper-right -->
+  <polygon points="230,230 195,145 230,170" fill="#F6A02D"/>
+  <polygon points="230,230 265,145 230,170" fill="#E8900A"/>
+
+  <!-- Compass Needle - Blue pointing lower-left -->
+  <polygon points="230,230 195,315 230,290" fill="#5B79C7"/>
+  <polygon points="230,230 265,315 230,290" fill="#3B5AA0"/>
+
+  <!-- Center dot -->
+  <circle cx="230" cy="230" r="10" fill="white" stroke="#211D52" stroke-width="2"/>
+
+  <!-- Swoosh / person arc from left to top-right -->
+  <path d="M100,300 Q80,230 120,170 Q180,80 330,70" stroke="white" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <path d="M100,300 Q80,230 120,170 Q180,80 330,70" stroke="#211D52" stroke-width="8" fill="none" stroke-linecap="round"/>
+
+  <!-- Person figure at top right -->
+  <!-- Head -->
+  <circle cx="370" cy="65" r="18" fill="#211D52"/>
+  <!-- Body reaching up -->
+  <path d="M370,83 Q375,100 365,120" stroke="#211D52" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <!-- Arms reaching up-right -->
+  <path d="M360,95 Q380,60 410,40" stroke="#211D52" stroke-width="7" stroke-linecap="round" fill="none"/>
+  <!-- Left arm -->
+  <path d="M365,100 Q340,85 330,95" stroke="#211D52" stroke-width="6" stroke-linecap="round" fill="none"/>
+
+  <!-- Golden Star -->
+  <polygon points="430,22 435,38 452,38 438,48 443,64 430,54 417,64 422,48 408,38 425,38" fill="#F6A02D"/>
+  <!-- Star sparkle -->
+  <circle cx="430" cy="12" r="3" fill="#F6A02D"/>
+  <circle cx="445" cy="18" r="2" fill="#F6A02D"/>
+</svg>
