@@ -165,7 +165,13 @@ export default function Assessment() {
           <span className="text-xs font-bold text-gray-400 tracking-wider absolute top-4 right-6">
             PERTANYAAN {currentIndex + 1} DARI {questions.length}
           </span>
-          <h2 className="text-xl font-medium mt-4 mb-8 leading-relaxed text-text-black">{currentQ.question_text}</h2>
+          <h2 className="text-xl font-medium mt-4 mb-4 leading-relaxed text-text-black">{currentQ.question_text}</h2>
+          
+          {currentQ.image_url && (
+            <div className="mb-6 flex justify-center">
+              <img src={currentQ.image_url} alt="Gambar soal" className="max-h-48 object-contain rounded-lg border border-gray-100" />
+            </div>
+          )}
 
           <div className="space-y-3">
             {currentQ.options && currentQ.options.map((opt, idx) => {
