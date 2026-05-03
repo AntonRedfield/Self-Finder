@@ -3,8 +3,9 @@ import { supabase } from '../../lib/supabase';
 import { Button } from '../../components/Button';
 import {
   Loader2, Save, Settings2, Layers, BookOpen, Brain, Puzzle,
-  ToggleLeft, ToggleRight, ChevronDown, ChevronUp, Info
+  ToggleLeft, ToggleRight, ChevronDown, ChevronUp, Info, ShieldCheck, Trash2, Fingerprint
 } from 'lucide-react';
+import { isPWA, isWebAuthnSupported, hasFastLogin, clearFastLogin, getAuthMethodLabel } from '../../lib/webauthn';
 
 const TIERS = ['LITE', 'ELITE', 'ULTIMATE'];
 
@@ -31,6 +32,7 @@ export default function Settings() {
   const tabs = [
     { id: 'tiers', label: 'Tingkat & Soal', icon: <Layers size={16} /> },
     { id: 'saran', label: 'Saran per Kategori', icon: <Settings2 size={16} /> },
+    { id: 'security', label: 'Keamanan', icon: <ShieldCheck size={16} /> },
   ];
 
   return (
@@ -57,6 +59,7 @@ export default function Settings() {
 
       {activeTab === 'tiers' && <TierSettingsPanel />}
       {activeTab === 'saran' && <SaranSettingsPanel />}
+      {activeTab === 'security' && <SecurityPanel />}
     </div>
   );
 }
@@ -478,6 +481,114 @@ function SaranSettingsPanel() {
           {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
           Simpan Pengaturan
         </Button>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   SECURITY PANEL — fast login / forget this device
+   ================================================================ */
+function SecurityPanel() {
+  const [inPWA, setInPWA] = useState(false);
+  const [supported, setSupported] = useState(false);
+  const [hasCredential, setHasCredential] = useState(false);
+  const [authMethod, setAuthMethod] = useState('');
+  const [cleared, setCleared] = useState(false);
+
+  useEffect(() => {
+    const pwa = isPWA();
+    setInPWA(pwa);
+    if (pwa) {
+      isWebAuthnSupported().then((ok) => {
+        setSupported(ok);
+        if (ok) {
+          setHasCredential(hasFastLogin());
+          setAuthMethod(getAuthMethodLabel());
+        }
+      });
+    }
+  }, []);
+
+  const handleForget = () => {
+    clearFastLogin();
+    setHasCredential(false);
+    setCleared(true);
+  };
+
+  if (!inPWA) {
+    return (
+      <div className="card border-2 border-gray-100">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 bg-gray-100 text-gray-400 rounded-xl flex items-center justify-center">
+            <ShieldCheck size={20} />
+          </div>
+          <div>
+            <h3 className="font-bold text-gray-600">Fast Login</h3>
+            <p className="text-xs text-gray-400">Keamanan perangkat</p>
+          </div>
+        </div>
+        <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 text-sm text-gray-500 flex items-start gap-2">
+          <Info size={16} className="shrink-0 mt-0.5" />
+          <p>Fitur ini hanya tersedia saat aplikasi diinstal sebagai PWA (Add to Home Screen). Buka aplikasi dari layar utama perangkat Anda untuk mengakses pengaturan ini.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!supported) {
+    return (
+      <div className="card border-2 border-gray-100">
+        <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-sm text-amber-700 flex items-start gap-2">
+          <Info size={16} className="shrink-0 mt-0.5" />
+          <p>Perangkat ini tidak mendukung autentikasi biometrik atau PIN melalui WebAuthn.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700 flex items-start gap-2">
+        <Info size={18} className="shrink-0 mt-0.5" />
+        <div>
+          <p className="font-semibold mb-1">Fast Login — {authMethod}</p>
+          <p>Fast Login memungkinkan admin masuk menggunakan biometrik atau PIN perangkat tanpa mengetik kata sandi setiap kali.</p>
+        </div>
+      </div>
+
+      <div className="card border-2 border-gray-100">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${hasCredential ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+              <Fingerprint size={20} />
+            </div>
+            <div>
+              <p className="font-semibold text-sm">
+                {hasCredential ? 'Fast Login Aktif' : 'Fast Login Belum Diatur'}
+              </p>
+              <p className="text-xs text-gray-400">
+                {hasCredential ? `Terdaftar dengan ${authMethod}` : 'Login dengan kata sandi untuk mengaktifkan'}
+              </p>
+            </div>
+          </div>
+
+          {hasCredential && (
+            <button
+              onClick={handleForget}
+              className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-700 font-semibold transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50"
+            >
+              <Trash2 size={14} />
+              Hapus
+            </button>
+          )}
+        </div>
+
+        {cleared && (
+          <div className="mt-4 bg-green-50 border border-green-100 rounded-xl p-3 text-sm text-green-700 text-center">
+            Fast Login telah dihapus dari perangkat ini. Login berikutnya akan meminta Anda untuk mengaktifkannya kembali.
+          </div>
+        )}
       </div>
     </div>
   );
