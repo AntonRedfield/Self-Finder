@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store';
 import { Button } from '../../components/Button';
+import Footer from '../../components/Footer';
 
 export default function UserDetails() {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ export default function UserDetails() {
     <div className="min-h-screen bg-bg-light flex flex-col items-center justify-center p-4">
       <div className="card w-full max-w-md animate-slide-up">
         <div className="flex justify-center mb-4">
-          <img src="/logo.svg" alt="SELF FINDER Logo" className="h-12 w-auto object-contain" />
+          <img src="/logo-square.svg" alt="SELF FINDER Logo" className="h-52 w-auto object-contain" />
         </div>
         <h2 className="text-2xl font-bold text-primary mb-2 text-center">Detail Anda</h2>
         <p className="text-sm text-text-dark text-center mb-6">Silakan isi data diri Anda untuk memulai tes.</p>
@@ -43,6 +44,7 @@ export default function UserDetails() {
           </div>
           <Button type="submit" className="w-full mt-4">Lanjutkan ke Tes</Button>
         </form>
+        <Footer className="mt-8 pt-6 border-t border-gray-100" />
       </div>
     </div>
   );

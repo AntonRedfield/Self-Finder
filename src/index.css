@@ -130,23 +130,45 @@ h3 {
 
 /* ========== PRINT STYLES ========== */
 @media print {
-  /* Hide everything by default, then show only printable content */
-  body {
-    background: white !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+  @page {
+    size: auto; /* Allows user to select A4 or F4 in print dialog */
+    margin: 15mm; /* Standard neat margin */
   }
 
-  /* Hide sidebar and header (marked with print:hidden in JSX) */
+  /* Base print adjustments */
+  body {
+    background: white !important;
+    color: #000 !important; /* Crisper text for printing */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    font-size: 11pt; /* Optimal print reading size */
+  }
+
+  /* Hide sidebar, headers, and specific elements marked for hiding */
   .print\:hidden,
   [class*="print:hidden"] {
     display: none !important;
   }
 
-  /* Remove shadows and adjust cards for print */
+  /* Remove shadows, adjust cards, and PREVENT awkward page breaks */
   .card {
     box-shadow: none !important;
-    border: 1px solid #ddd !important;
+    border: 1px solid #e5e7eb !important; /* Lighter border for print */
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 1.5rem !important;
+  }
+
+  /* Prevent headings from being left alone at the bottom of a page */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+    break-after: avoid;
+    color: #000 !important;
+  }
+
+  /* Keep paragraphs and list items together if possible */
+  p, li {
+    page-break-inside: avoid;
     break-inside: avoid;
   }
 
@@ -156,17 +178,11 @@ h3 {
     background-color: white !important;
   }
 
-  /* Ensure full width */
-  main, [class*="flex-1"] {
+  /* Ensure full width and clear centering */
+  main, [class*="flex-1"], .max-w-3xl {
     width: 100% !important;
     max-width: 100% !important;
     padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  /* Page setup */
-  @page {
-    margin: 1.5cm;
-    size: A4;
+    margin: 0 auto !important;
   }
 }

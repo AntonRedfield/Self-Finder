@@ -1,7 +1,8 @@
 import { Outlet, NavLink, Navigate, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ListTodo, KeyRound, Users, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, ListTodo, KeyRound, Users, LogOut, Menu, X, MessageSquareQuote, Settings2 } from 'lucide-react';
 import { useStore } from '../store';
 import { useState } from 'react';
+import Footer from './Footer';
 
 export default function AdminLayout() {
   const { isAdminAuthenticated, adminLogout } = useStore();
@@ -22,10 +23,12 @@ export default function AdminLayout() {
     { to: '/admin/questions', icon: <ListTodo size={20} />, label: 'Pertanyaan' },
     { to: '/admin/tokens', icon: <KeyRound size={20} />, label: 'Token' },
     { to: '/admin/results', icon: <Users size={20} />, label: 'Hasil' },
+    { to: '/admin/captions', icon: <MessageSquareQuote size={20} />, label: 'Kontak & Keterangan' },
+    { to: '/admin/settings', icon: <Settings2 size={20} />, label: 'Pengaturan' },
   ];
 
   return (
-    <div className="flex h-screen bg-bg-light">
+    <div className="flex h-screen print:h-auto bg-bg-light print:bg-white">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/40 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
@@ -69,7 +72,7 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+      <div className="flex-1 flex flex-col overflow-hidden print:overflow-visible min-w-0">
         <header className="h-14 md:h-16 bg-white border-b border-[#E0E0E0] flex items-center px-4 md:px-8 shadow-sm z-10 shrink-0 print:hidden">
           <button onClick={() => setSidebarOpen(true)} className="md:hidden mr-3 text-primary">
             <Menu size={24} />
@@ -77,10 +80,11 @@ export default function AdminLayout() {
           <h2 className="text-lg md:text-xl font-bold text-primary truncate">Portal Administrasi</h2>
         </header>
 
-        <main className="flex-1 overflow-auto p-4 md:p-8 relative">
-          <div className="max-w-6xl mx-auto">
+        <main className="flex-1 overflow-auto print:overflow-visible p-4 md:p-8 relative flex flex-col">
+          <div className="max-w-6xl mx-auto w-full flex-1">
             <Outlet />
           </div>
+          <Footer className="mt-auto py-4" />
         </main>
       </div>
     </div>

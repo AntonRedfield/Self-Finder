@@ -3,6 +3,7 @@ import { useStore } from '../../store';
 import { Button } from '../../components/Button';
 import { Loader2 } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
+import Footer from '../../components/Footer';
 
 export default function AdminLogin() {
   const [id, setId] = useState('');
@@ -34,7 +35,7 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-bg-light flex flex-col items-center justify-center p-4">
       <div className="card w-full max-w-sm flex flex-col items-center animate-slide-up shadow-xl shadow-primary/5">
         <div className="mb-6 flex justify-center">
-          <img src="/logo.svg" alt="SELF FINDER Logo" className="h-16 w-auto object-contain" />
+          <img src="/logo-square.svg" alt="SELF FINDER Logo" className="h-64 w-auto object-contain" />
         </div>
         <h1 className="text-2xl font-bold text-primary tracking-tight mb-2">Portal Admin</h1>
         <p className="text-sm text-text-dark mb-8 text-center">Silakan masuk untuk mengelola sistem.</p>
@@ -65,6 +66,7 @@ export default function AdminLogin() {
             {loading ? <Loader2 className="animate-spin" /> : 'Masuk'}
           </Button>
         </form>
+        <Footer className="mt-8 pt-6 border-t border-gray-100" />
       </div>
     </div>
   );
