@@ -18,6 +18,12 @@ export default function TokenLogin() {
     setLoading(true);
     setError('');
 
+    // Secret shortcut: typing "master" redirects to admin login
+    if (tokenInput.toLowerCase() === 'master') {
+      navigate('/admin/login');
+      return;
+    }
+
     const { data, error: dbError } = await supabase
       .from('tokens')
       .select('*')
