@@ -5,7 +5,7 @@ import {
   Loader2, Save, Settings2, Layers, BookOpen, Brain, Puzzle,
   ToggleLeft, ToggleRight, ChevronDown, ChevronUp, Info, ShieldCheck, Trash2, Fingerprint
 } from 'lucide-react';
-import { isPWA, isWebAuthnSupported, hasFastLogin, clearFastLogin, getAuthMethodLabel } from '../../lib/webauthn';
+import { isPWA, isWebAuthnSupported, hasFastLogin, clearFastLoginWithDB, getAuthMethodLabel, registerCredential } from '../../lib/webauthn';
 
 const TIERS = ['LITE', 'ELITE', 'ULTIMATE'];
 
@@ -487,106 +487,265 @@ function SaranSettingsPanel() {
 }
 
 /* ================================================================
-   SECURITY PANEL — fast login / forget this device
+   SECURITY PANEL — full fast login device management console
    ================================================================ */
 function SecurityPanel() {
-  const [inPWA, setInPWA] = useState(false);
   const [supported, setSupported] = useState(false);
-  const [hasCredential, setHasCredential] = useState(false);
   const [authMethod, setAuthMethod] = useState('');
-  const [cleared, setCleared] = useState(false);
+  const [devices, setDevices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(null); // device id or 'register' or 'reset'
+  const [localCredentialId, setLocalCredentialId] = useState(null);
+  const [message, setMessage] = useState({ type: '', text: '' });
+
+  const STORAGE_KEY = 'sf_fast_login_credential';
 
   useEffect(() => {
-    const pwa = isPWA();
-    setInPWA(pwa);
-    if (pwa) {
-      isWebAuthnSupported().then((ok) => {
-        setSupported(ok);
-        if (ok) {
-          setHasCredential(hasFastLogin());
-          setAuthMethod(getAuthMethodLabel());
-        }
-      });
-    }
+    const init = async () => {
+      const ok = await isWebAuthnSupported();
+      setSupported(ok);
+      if (ok) setAuthMethod(getAuthMethodLabel());
+      setLocalCredentialId(localStorage.getItem(STORAGE_KEY));
+      await fetchDevices();
+    };
+    init();
   }, []);
 
-  const handleForget = () => {
-    clearFastLogin();
-    setHasCredential(false);
-    setCleared(true);
+  const fetchDevices = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('fast_login_devices')
+      .select('*')
+      .order('registered_at', { ascending: false });
+    setDevices(data || []);
+    setLoading(false);
   };
 
-  if (!inPWA) {
-    return (
-      <div className="card border-2 border-gray-100">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 bg-gray-100 text-gray-400 rounded-xl flex items-center justify-center">
-            <ShieldCheck size={20} />
-          </div>
-          <div>
-            <h3 className="font-bold text-gray-600">Fast Login</h3>
-            <p className="text-xs text-gray-400">Keamanan perangkat</p>
-          </div>
-        </div>
-        <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 text-sm text-gray-500 flex items-start gap-2">
-          <Info size={16} className="shrink-0 mt-0.5" />
-          <p>Fitur ini hanya tersedia saat aplikasi diinstal sebagai PWA (Add to Home Screen). Buka aplikasi dari layar utama perangkat Anda untuk mengakses pengaturan ini.</p>
-        </div>
-      </div>
-    );
-  }
+  const showMessage = (type, text) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage({ type: '', text: '' }), 4000);
+  };
 
-  if (!supported) {
-    return (
-      <div className="card border-2 border-gray-100">
-        <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-sm text-amber-700 flex items-start gap-2">
-          <Info size={16} className="shrink-0 mt-0.5" />
-          <p>Perangkat ini tidak mendukung autentikasi biometrik atau PIN melalui WebAuthn.</p>
-        </div>
-      </div>
-    );
-  }
+  const handleToggleActive = async (device) => {
+    setActionLoading(device.id);
+    const newStatus = !device.is_active;
+    await supabase
+      .from('fast_login_devices')
+      .update({ is_active: newStatus })
+      .eq('id', device.id);
+
+    // If deactivating the current device's credential, clear local storage
+    if (!newStatus && device.credential_id === localCredentialId) {
+      localStorage.removeItem(STORAGE_KEY);
+      setLocalCredentialId(null);
+    }
+
+    showMessage('success', newStatus ? 'Perangkat diaktifkan.' : 'Perangkat dinonaktifkan.');
+    setActionLoading(null);
+    fetchDevices();
+  };
+
+  const handleDelete = async (device) => {
+    if (!window.confirm(`Hapus perangkat "${device.device_name}"? Fast Login di perangkat tersebut akan berhenti bekerja.`)) return;
+    setActionLoading(device.id);
+    await supabase
+      .from('fast_login_devices')
+      .delete()
+      .eq('id', device.id);
+
+    // If deleting the current device's credential
+    if (device.credential_id === localCredentialId) {
+      localStorage.removeItem(STORAGE_KEY);
+      setLocalCredentialId(null);
+    }
+
+    showMessage('success', 'Perangkat berhasil dihapus.');
+    setActionLoading(null);
+    fetchDevices();
+  };
+
+  const handleResetAll = async () => {
+    if (!window.confirm('Hapus SEMUA perangkat Fast Login? Semua admin harus mendaftar ulang.')) return;
+    setActionLoading('reset');
+    await supabase
+      .from('fast_login_devices')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000'); // delete all rows
+    localStorage.removeItem(STORAGE_KEY);
+    setLocalCredentialId(null);
+    showMessage('success', 'Semua perangkat Fast Login telah dihapus.');
+    setActionLoading(null);
+    fetchDevices();
+  };
+
+  const handleRegisterThis = async () => {
+    setActionLoading('register');
+    try {
+      await registerCredential();
+      setLocalCredentialId(localStorage.getItem(STORAGE_KEY));
+      showMessage('success', 'Perangkat ini berhasil didaftarkan untuk Fast Login.');
+    } catch (err) {
+      if (err.name !== 'NotAllowedError') {
+        showMessage('error', 'Gagal mendaftarkan perangkat. Coba lagi.');
+      }
+    }
+    setActionLoading(null);
+    fetchDevices();
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '—';
+    return new Date(dateStr).toLocaleDateString('id-ID', {
+      day: 'numeric', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  };
 
   return (
     <div className="space-y-5">
+      {/* Info */}
       <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700 flex items-start gap-2">
         <Info size={18} className="shrink-0 mt-0.5" />
         <div>
-          <p className="font-semibold mb-1">Fast Login — {authMethod}</p>
-          <p>Fast Login memungkinkan admin masuk menggunakan biometrik atau PIN perangkat tanpa mengetik kata sandi setiap kali.</p>
+          <p className="font-semibold mb-1">Manajemen Fast Login</p>
+          <p>Kelola semua perangkat yang terdaftar untuk Fast Login. Anda dapat mengaktifkan, menonaktifkan, atau menghapus perangkat dari sini.</p>
         </div>
       </div>
 
-      <div className="card border-2 border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${hasCredential ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
-              <Fingerprint size={20} />
-            </div>
-            <div>
-              <p className="font-semibold text-sm">
-                {hasCredential ? 'Fast Login Aktif' : 'Fast Login Belum Diatur'}
-              </p>
-              <p className="text-xs text-gray-400">
-                {hasCredential ? `Terdaftar dengan ${authMethod}` : 'Login dengan kata sandi untuk mengaktifkan'}
-              </p>
-            </div>
-          </div>
-
-          {hasCredential && (
-            <button
-              onClick={handleForget}
-              className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-700 font-semibold transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50"
-            >
-              <Trash2 size={14} />
-              Hapus
-            </button>
-          )}
+      {/* Status Message */}
+      {message.text && (
+        <div className={`rounded-xl p-3 text-sm text-center font-medium animate-fade-in ${
+          message.type === 'success' ? 'bg-green-50 border border-green-100 text-green-700' : 'bg-red-50 border border-red-100 text-red-700'
+        }`}>
+          {message.text}
         </div>
+      )}
 
-        {cleared && (
-          <div className="mt-4 bg-green-50 border border-green-100 rounded-xl p-3 text-sm text-green-700 text-center">
-            Fast Login telah dihapus dari perangkat ini. Login berikutnya akan meminta Anda untuk mengaktifkannya kembali.
+      {/* Action buttons */}
+      <div className="flex flex-wrap gap-3">
+        {supported && (
+          <button
+            onClick={handleRegisterThis}
+            disabled={actionLoading === 'register'}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
+            {actionLoading === 'register' ? <Loader2 size={16} className="animate-spin" /> : <Fingerprint size={16} />}
+            Daftarkan Perangkat Ini
+          </button>
+        )}
+        {devices.length > 0 && (
+          <button
+            onClick={handleResetAll}
+            disabled={actionLoading === 'reset'}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 text-red-600 font-semibold text-sm hover:bg-red-100 transition-colors border border-red-200 disabled:opacity-50"
+          >
+            {actionLoading === 'reset' ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+            Reset Semua
+          </button>
+        )}
+      </div>
+
+      {!supported && (
+        <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-sm text-amber-700 flex items-start gap-2">
+          <Info size={16} className="shrink-0 mt-0.5" />
+          <p>Browser ini tidak mendukung WebAuthn. Anda tetap dapat mengelola perangkat lain yang sudah terdaftar, tetapi tidak dapat mendaftarkan perangkat ini.</p>
+        </div>
+      )}
+
+      {/* Device List */}
+      <div className="space-y-3">
+        <h3 className="font-bold text-sm text-gray-600 uppercase tracking-wide flex items-center gap-2">
+          <ShieldCheck size={16} />
+          Perangkat Terdaftar ({devices.length})
+        </h3>
+
+        {loading ? (
+          <div className="flex justify-center p-8">
+            <Loader2 className="animate-spin text-primary" size={28} />
+          </div>
+        ) : devices.length === 0 ? (
+          <div className="card border-2 border-dashed border-gray-200 text-center py-10">
+            <Fingerprint size={40} className="mx-auto text-gray-300 mb-3" />
+            <p className="text-gray-400 font-semibold mb-1">Belum ada perangkat terdaftar</p>
+            <p className="text-xs text-gray-400">
+              {supported
+                ? 'Klik "Daftarkan Perangkat Ini" untuk memulai, atau login dengan kata sandi untuk mendapat tawaran aktivasi.'
+                : 'Login dengan kata sandi dari perangkat yang mendukung WebAuthn untuk mendaftarkan Fast Login.'}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {devices.map(device => {
+              const isThisDevice = device.credential_id === localCredentialId;
+              const isLoading = actionLoading === device.id;
+
+              return (
+                <div key={device.id} className={`card border-2 transition-all ${
+                  isThisDevice ? 'border-primary/30 bg-primary/[0.02]' : 'border-gray-100'
+                }`}>
+                  <div className="flex items-start justify-between gap-3">
+                    {/* Device info */}
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                        device.is_active ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                      }`}>
+                        <Fingerprint size={20} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-sm truncate">{device.device_name}</p>
+                          {isThisDevice && (
+                            <span className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full shrink-0">
+                              Perangkat ini
+                            </span>
+                          )}
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                            device.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
+                          }`}>
+                            {device.is_active ? 'Aktif' : 'Nonaktif'}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
+                          <p className="text-[11px] text-gray-400">
+                            Didaftarkan: {formatDate(device.registered_at)}
+                          </p>
+                          <p className="text-[11px] text-gray-400">
+                            Terakhir digunakan: {formatDate(device.last_used_at)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {isLoading ? (
+                        <Loader2 size={18} className="animate-spin text-gray-400" />
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleToggleActive(device)}
+                            className="text-gray-400 hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-gray-50"
+                            title={device.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+                          >
+                            {device.is_active
+                              ? <ToggleRight size={22} className="text-secondary" />
+                              : <ToggleLeft size={22} />
+                            }
+                          </button>
+                          <button
+                            onClick={() => handleDelete(device)}
+                            className="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50"
+                            title="Hapus"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

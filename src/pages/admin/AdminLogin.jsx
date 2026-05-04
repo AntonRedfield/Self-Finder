@@ -5,12 +5,11 @@ import { Loader2, ShieldCheck, Fingerprint, KeyRound, ArrowLeft, X } from 'lucid
 import { Navigate } from 'react-router-dom';
 import Footer from '../../components/Footer';
 import {
-  isPWA,
   isWebAuthnSupported,
   hasFastLogin,
   registerCredential,
   authenticateCredential,
-  clearFastLogin,
+  syncFastLoginStatus,
   getAuthMethodLabel,
 } from '../../lib/webauthn';
 
@@ -21,30 +20,37 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
 
   // Fast login state
-  const [runningInPWA, setRunningInPWA] = useState(false);
   const [webAuthnAvailable, setWebAuthnAvailable] = useState(false);
   const [fastLoginReady, setFastLoginReady] = useState(false);
-  const [showFastLogin, setShowFastLogin] = useState(false); // show biometric screen
-  const [showSetupModal, setShowSetupModal] = useState(false); // show setup prompt
+  const [showFastLogin, setShowFastLogin] = useState(false);
+  const [showSetupModal, setShowSetupModal] = useState(false);
   const [biometricLoading, setBiometricLoading] = useState(false);
   const [authMethod, setAuthMethod] = useState('');
+  const [initialChecking, setInitialChecking] = useState(true);
 
-  const { isAdminAuthenticated, adminLogin } = useStore();
+  const { isAdminAuthenticated, adminLogin, adminLoginDirect } = useStore();
 
   useEffect(() => {
-    const pwa = isPWA();
-    setRunningInPWA(pwa);
-    if (pwa) {
-      isWebAuthnSupported().then((supported) => {
-        setWebAuthnAvailable(supported);
-        if (supported) {
-          setAuthMethod(getAuthMethodLabel());
-          const credStored = hasFastLogin();
-          setFastLoginReady(credStored);
-          setShowFastLogin(credStored); // default to fast login screen if set up
+    const init = async () => {
+      const supported = await isWebAuthnSupported();
+      setWebAuthnAvailable(supported);
+
+      if (supported) {
+        setAuthMethod(getAuthMethodLabel());
+
+        // Check local + sync with DB (admin might have revoked)
+        const hasLocal = hasFastLogin();
+        if (hasLocal) {
+          const stillValid = await syncFastLoginStatus();
+          setFastLoginReady(stillValid);
+          setShowFastLogin(stillValid);
+        } else {
+          setFastLoginReady(false);
         }
-      });
-    }
+      }
+      setInitialChecking(false);
+    };
+    init();
   }, []);
 
   if (isAdminAuthenticated) {
@@ -63,8 +69,8 @@ export default function AdminLogin() {
         setLoading(false);
         return;
       }
-      // Successful password login in PWA — offer fast login setup if available but not yet set up
-      if (runningInPWA && webAuthnAvailable && !fastLoginReady) {
+      // Successful password login — offer fast login setup if available but not yet set up
+      if (webAuthnAvailable && !fastLoginReady) {
         setLoading(false);
         setShowSetupModal(true);
       } else {
@@ -79,9 +85,18 @@ export default function AdminLogin() {
     setError('');
     try {
       await authenticateCredential();
-      adminLogin('master@self.finder', 'master@sf12'); // authenticate after biometric verify
+      // Biometric verified + credential active in DB → authenticate directly
+      adminLoginDirect();
     } catch (err) {
-      if (err.name === 'NotAllowedError') {
+      if (err.message === 'CREDENTIAL_REVOKED') {
+        setError('Kredensial Fast Login telah dihapus oleh admin. Silakan login dengan ID & Kata Sandi.');
+        setFastLoginReady(false);
+        setShowFastLogin(false);
+      } else if (err.message === 'CREDENTIAL_DEACTIVATED') {
+        setError('Fast Login dinonaktifkan oleh admin. Hubungi administrator.');
+        setFastLoginReady(false);
+        setShowFastLogin(false);
+      } else if (err.name === 'NotAllowedError') {
         setError('Autentikasi dibatalkan atau ditolak.');
       } else {
         setError('Fast Login gagal. Gunakan ID & Kata Sandi.');
@@ -134,6 +149,15 @@ export default function AdminLogin() {
       <path d="M14 5a6 6 0 0 1 5.13 8.98" />
     </svg>
   );
+
+  // ── Loading state while checking credential ────────────────────
+  if (initialChecking) {
+    return (
+      <div className="min-h-screen bg-bg-light flex flex-col items-center justify-center p-4">
+        <Loader2 size={32} className="text-primary animate-spin" />
+      </div>
+    );
+  }
 
   // ── Fast Login Screen ──────────────────────────────────────────
   if (showFastLogin) {
@@ -224,8 +248,8 @@ export default function AdminLogin() {
           </Button>
         </form>
 
-        {/* Show fast login button if already set up and we're in PWA */}
-        {runningInPWA && webAuthnAvailable && fastLoginReady && (
+        {/* Show fast login button if already set up */}
+        {webAuthnAvailable && fastLoginReady && (
           <button
             onClick={() => { setShowFastLogin(true); setError(''); }}
             className="flex items-center gap-1.5 text-sm text-primary hover:text-primary/70 transition-colors mt-5 font-semibold"
@@ -261,7 +285,7 @@ export default function AdminLogin() {
                 <p className="text-sm font-bold text-primary">{authMethod}</p>
               </div>
               <p className="text-xs text-gray-400 mb-6">
-                Fast Login hanya tersedia saat aplikasi diinstal (PWA) dan terikat pada perangkat ini saja.
+                Fast Login terikat pada perangkat ini saja. Anda dapat mengelolanya di halaman Pengaturan.
               </p>
 
               <div className="w-full space-y-3">

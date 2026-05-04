@@ -16,5 +16,6 @@ export const useStore = create((set) => ({
     }
     return false;
   },
+  adminLoginDirect: () => set({ isAdminAuthenticated: true }),
   adminLogout: () => set({ isAdminAuthenticated: false })
 }));
