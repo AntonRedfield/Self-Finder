@@ -5,7 +5,11 @@ import {
   Loader2, Save, Settings2, Layers, BookOpen, Brain, Puzzle,
   ToggleLeft, ToggleRight, ChevronDown, ChevronUp, Info, ShieldCheck, Trash2, Fingerprint
 } from 'lucide-react';
-import { isPWA, isWebAuthnSupported, hasFastLogin, clearFastLoginWithDB, getAuthMethodLabel, registerCredential } from '../../lib/webauthn';
+import {
+  isPWA, isWebAuthnSupported, hasFastLogin, clearFastLoginWithDB,
+  getAuthMethodLabel, registerCredential, authenticateCredential,
+  getDiagnostics, checkWebAuthnCapability, WebAuthnStatus, getWebAuthnErrorMessage,
+} from '../../lib/webauthn';
 
 const TIERS = ['LITE', 'ELITE', 'ULTIMATE'];
 
@@ -494,9 +498,11 @@ function SecurityPanel() {
   const [authMethod, setAuthMethod] = useState('');
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(null); // device id or 'register' or 'reset'
+  const [actionLoading, setActionLoading] = useState(null); // device id or 'register' or 'reset' or 'test'
   const [localCredentialId, setLocalCredentialId] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [diagnostics, setDiagnostics] = useState(null);
+  const [capabilityStatus, setCapabilityStatus] = useState(null);
 
   const STORAGE_KEY = 'sf_fast_login_credential';
 
@@ -506,6 +512,15 @@ function SecurityPanel() {
       setSupported(ok);
       if (ok) setAuthMethod(getAuthMethodLabel());
       setLocalCredentialId(localStorage.getItem(STORAGE_KEY));
+
+      // Load diagnostics & capability
+      const [diag, cap] = await Promise.all([
+        getDiagnostics(),
+        checkWebAuthnCapability(),
+      ]);
+      setDiagnostics(diag);
+      setCapabilityStatus(cap);
+
       await fetchDevices();
     };
     init();
@@ -586,11 +601,24 @@ function SecurityPanel() {
       showMessage('success', 'Perangkat ini berhasil didaftarkan untuk Fast Login.');
     } catch (err) {
       if (err.name !== 'NotAllowedError') {
-        showMessage('error', 'Gagal mendaftarkan perangkat. Coba lagi.');
+        const errInfo = getWebAuthnErrorMessage(err);
+        showMessage('error', errInfo.message);
       }
     }
     setActionLoading(null);
     fetchDevices();
+  };
+
+  const handleTestAuth = async () => {
+    setActionLoading('test');
+    try {
+      await authenticateCredential();
+      showMessage('success', '✓ Fast Login berhasil! Autentikasi perangkat berfungsi dengan baik.');
+    } catch (err) {
+      const errInfo = getWebAuthnErrorMessage(err);
+      showMessage('error', `Tes gagal: ${errInfo.message}`);
+    }
+    setActionLoading(null);
   };
 
   const formatDate = (dateStr) => {
@@ -599,6 +627,20 @@ function SecurityPanel() {
       day: 'numeric', month: 'short', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
     });
+  };
+
+  const getCapabilityBadge = () => {
+    if (!capabilityStatus) return null;
+    switch (capabilityStatus.status) {
+      case WebAuthnStatus.READY:
+        return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Siap</span>;
+      case WebAuthnStatus.NO_PLATFORM_AUTHENTICATOR:
+        return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Tidak Ada Autentikator</span>;
+      case WebAuthnStatus.UNSUPPORTED:
+        return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600">Tidak Didukung</span>;
+      default:
+        return null;
+    }
   };
 
   return (
@@ -611,6 +653,36 @@ function SecurityPanel() {
           <p>Kelola semua perangkat yang terdaftar untuk Fast Login. Anda dapat mengaktifkan, menonaktifkan, atau menghapus perangkat dari sini.</p>
         </div>
       </div>
+
+      {/* Device Diagnostics Card */}
+      {diagnostics && (
+        <div className="card border border-gray-100">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-bold text-sm text-gray-600 flex items-center gap-2">
+              <Info size={14} />
+              Perangkat Ini
+            </h3>
+            {getCapabilityBadge()}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: 'Browser', value: diagnostics.browser },
+              { label: 'OS', value: diagnostics.os },
+              { label: 'Mode', value: diagnostics.isPWA ? 'PWA' : 'Browser' },
+              { label: 'WebAuthn', value: diagnostics.webAuthnAPI ? '✓ Didukung' : '✗ Tidak' },
+              { label: 'Autentikator', value: diagnostics.platformAuthenticator ? '✓ Tersedia' : '✗ Tidak ada' },
+              { label: 'Secure Context', value: diagnostics.isSecureContext ? '✓ Ya' : '✗ Tidak' },
+              { label: 'Metode', value: supported ? authMethod : '—' },
+              { label: 'Kredensial Lokal', value: diagnostics.localCredentialStored ? diagnostics.localCredentialId : 'Tidak ada' },
+            ].map((item, i) => (
+              <div key={i} className="bg-gray-50 rounded-lg p-2">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wide">{item.label}</p>
+                <p className="text-xs font-semibold text-text-dark mt-0.5 truncate">{item.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Status Message */}
       {message.text && (
@@ -631,6 +703,16 @@ function SecurityPanel() {
           >
             {actionLoading === 'register' ? <Loader2 size={16} className="animate-spin" /> : <Fingerprint size={16} />}
             Daftarkan Perangkat Ini
+          </button>
+        )}
+        {supported && localCredentialId && (
+          <button
+            onClick={handleTestAuth}
+            disabled={actionLoading === 'test'}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-secondary/10 text-secondary font-semibold text-sm hover:bg-secondary/20 transition-colors border border-secondary/20 disabled:opacity-50"
+          >
+            {actionLoading === 'test' ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
+            Tes Fast Login
           </button>
         )}
         {devices.length > 0 && (
