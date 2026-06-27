@@ -152,7 +152,9 @@ export default function AdminLogin() {
       // Brief success animation before redirect
       setTimeout(() => {
         adminLoginDirect();
-      }, 800);
+        // Reset successFlash so the Navigate guard can redirect
+        setSuccessFlash(false);
+      }, 300);
     } catch (err) {
       console.error('🔐 Auth error:', err);
       const errInfo = getWebAuthnErrorMessage(err);
